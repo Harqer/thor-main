@@ -97,17 +97,21 @@ def header_to_cv_features(header: dict, n_modes: int = 8) -> np.ndarray:
     displacement_params = 4.0 * (features[n_modes:2 * n_modes] - 0.5)
     return np.concatenate([squeezing_params, displacement_params])
 
-def build_entangled_header_nonce_tensor(headers: list, nonces: list, n_modes: int = 8) -> np.ndarray:
+def build_entangled_header_variation_tensor(headers, nonces, timestamps, merkle_roots, n_modes=8):
     batch = []
     for header in headers:
-        nonce_vectors = []
+        variation_vectors = []
         for nonce in nonces:
-            candidate_header = header.copy()
-            candidate_header['nonce'] = nonce
-            features = header_to_cv_features(candidate_header, n_modes)
-            nonce_vectors.append(features)
-        batch.append(np.stack(nonce_vectors))
-    tensor = np.stack(batch)  # shape: (num_headers, num_nonces, n_modes*2)
+            for timestamp in timestamps:
+                for merkle_root in merkle_roots:
+                    candidate_header = header.copy()
+                    candidate_header['nonce'] = nonce
+                    candidate_header['curtime'] = timestamp
+                    candidate_header['merkleroot'] = merkle_root
+                    features = header_to_cv_features(candidate_header, n_modes)
+                    variation_vectors.append(features)
+        batch.append(np.stack(variation_vectors))
+    tensor = np.stack(batch)
     return tensor
 
 class BlackbirdCircuitBuilder:
